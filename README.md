@@ -6,22 +6,21 @@ This repository provides tools for:
 - simulating **actin-induced membrane deformation** using **Cytosim with a deformable membrane in 2-D**.
 - analysis and plotting codes used to generate figues in the manuscript - [Light guided actin polymerization drives motitliy in protocells](https://doi.org/10.1101/2024.10.14.617543)
 
-## 📂 Repository Structure
+## Repository Structure
 ```
 actin-bracing-model/
 │── Figures/                          # Contains general inputs and outputs from simulations
 │   ├── inputfiles/                       # Cytosim config files used to simulate each condition
 │   ├── outputfiles/                # Final results used to make figures
 │
-│── simulation-code/                           # Source code used to simulate actin filaments with deformable membrane
-│   ├── cytosim-lee-lab/            # Code for cytosim with deformable 2-D membrane
-|
+│──Cytosim/                           # Source code used to simulate actin filaments with deformable membrane
+│
 │── README.md                       # Project documentation
 │── LICENSE                         # MIT License file
 │── ./gitignore                     # Files to ignore
 ```
 
-## 🚀 Installation
+## Installation
 
 ### 1 Clone the Repository
 ```sh
@@ -31,8 +30,7 @@ cd actin-bracing-model
 
 ### 2 Install Cytosim
 ```sh
-cd simulation-code/cytosim-lee-lab-main # Mac or Linux
-cd simulation-code\cytosim-lee-lab-main # Windows
+cd Cytosim
 make clean
 make dim2
 ```
@@ -60,9 +58,9 @@ Notably, changes to this file can be done by hand or by the pixi cli tool.
 The `pixi.lock` file is a human readable list of solved dependency versions.
 Changes to the lockfile are handled by pixi and reflect changes to the environment.
 
-## 📜 License
+## License
 This project is licensed under the **MIT License**.
 
-## 📬 Contact
+## Contact
 If you have questions, feel free to reach out via:
 - **Email:** hakenuwa@ucsd.edu or ctlee@ucsd.edu
