@@ -13,9 +13,8 @@ actin-bracing-model/
 │   ├── inputfiles/                       # Cytosim config files used to simulate each condition
 │   ├── outputfiles/                # Final results used to make figures
 │
-│── simulation-code/                           # Source code used to simulate actin filaments with deformable membrane
-│   ├── cytosim-lee-lab/            # Code for cytosim with deformable 2-D membrane
-|
+│──Cytosim/                           # Source code used to simulate actin filaments with deformable membrane
+│
 │── README.md                       # Project documentation
 │── LICENSE                         # MIT License file
 │── ./gitignore                     # Files to ignore
@@ -31,8 +30,7 @@ cd actin-bracing-model
 
 ### 2 Install Cytosim
 ```sh
-cd simulation-code/cytosim-lee-lab-main # Mac or Linux
-cd simulation-code\cytosim-lee-lab-main # Windows
+cd Cytosim
 make clean
 make dim2
 ```
