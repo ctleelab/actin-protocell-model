@@ -4,6 +4,7 @@
 
 This repository provides tools for:
 - simulating **actin-induced membrane deformation** using **Cytosim with a deformable membrane in 2-D**.
+- analysis and plotting codes used to generate figues in the manuscript [Light guided actin polymerization drives motitliy in protocells](https://doi.org/10.1101/2024.10.14.617543)
 
 ## 📂 Repository Structure
 ```
