@@ -1,0 +1,47 @@
+% Steric fibers on the surface of a cylinder
+% F. Nedelec, March 2015
+
+set simul system
+{
+    dim = 3
+    time_step = 0.01
+    viscosity = 0.5
+    steric = 1, 100
+    display = ( style=3; multisample=4; )
+}
+
+set space cell
+{
+    shape = bicylinder
+    display = ( color=0x0000FF44; visible=1; )
+}
+
+new cell
+{
+    radius = 1
+}
+
+set fiber microtubule
+{
+    steric = 1, 0.05
+    rigidity = 1
+    segmentation = 0.2
+    confine = on, 4000
+    activity = grow
+    growing_speed = 0.1
+    max_length = 1.0
+    display = ( line=5 )
+}
+
+new 200 microtubule
+{
+    length = 0.01
+    position = surface
+    direction = tangent
+    plus_end = grow
+}
+
+run 10000 system
+{
+    nb_frames = 10
+}

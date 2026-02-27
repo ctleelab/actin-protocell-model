@@ -1,0 +1,92 @@
+%{
+ @example frap.cym
+ Deleting objects within a region
+ F. Nedelec, April 2013; April 2022
+}
+
+set simul system
+{
+    time_step = 0.01
+    viscosity = 0.1
+    display = ( )
+}
+
+set space cell
+{
+    shape = sphere
+}
+
+new cell
+{
+    radius = 5
+}
+
+set fiber microtubule
+{
+    rigidity = 30
+    segmentation = 0.5
+    confine = inside, 100
+
+    display = ( line_width=3; )
+}
+
+set solid core
+{
+    display = ( style=3; color=red; )
+}
+
+set aster star
+{
+    stiffness = 1000, 500
+}
+
+new star
+{
+    solid = core
+    radius = 0.5
+    point1 = center, 0.5
+    fibers = 32, microtubule, ( length = 4; )
+    position = disc 2
+}
+
+set hand binder
+{
+    binding = 10, 0.05
+    unbinding = 1, 1
+    display = ( size=8; color=light_green )
+}
+
+set single simplex
+{
+    hand = binder
+    diffusion = 0.1
+}
+
+new 10000 simplex
+
+run 100 system
+{
+    nb_frames = 2
+}
+
+set space box
+{
+    shape = rectangle
+}
+
+new box
+{
+    length = 4, 4, 4
+}
+
+delete all simplex
+{
+    position = inside, box
+}
+
+delete box
+
+run 2000 system
+{
+    nb_frames = 20
+}

@@ -1,0 +1,85 @@
+% A 'prepared' contractile actin network
+% The filament are initialized with a random walk,
+% and motors are distributed on the crosspoints
+% Both motor and crosslinkers do not unbind
+% FJN, Jan 2016
+
+set simul system
+{
+    time_step = 0.001
+    viscosity = 0.1
+    display = ( point_size=2; )
+    dim = 2
+}
+
+set space cell
+{
+    shape = circle
+}
+
+set fiber filament
+{
+    rigidity = 0.05
+    segmentation = 0.1
+    display = ( line=0.5, 1; )
+}
+
+set hand binder
+{
+    binding = 10, 0.01
+    unbinding = 0, inf
+    display = ( size=2; color=gray; )
+}
+
+set hand plus_motor
+{
+    binding = 10, 0.01
+    unbinding = 0, inf
+    
+    activity = move
+    unloaded_speed = 0.5
+    stall_force = 6
+    
+    display = ( size=2; color=blue; )
+}
+
+set couple crosslinker
+{
+    hand1 = binder
+    hand2 = binder
+    stiffness = 250
+    diffusion = 2
+}
+
+set couple motor
+{
+    hand1 = plus_motor
+    hand2 = plus_motor
+    stiffness = 250
+    diffusion = 2
+}
+
+
+new cell
+{
+    radius = 4
+}
+
+new 250 filament
+{
+    length = 2.5
+    % initialize shape from a persistent random walk
+    equilibrate = 17
+}
+
+new 1000 motor
+new 1000 crosslinker
+
+% distribute connectors on the crosspoints
+call connect
+
+run 2500 system
+{   
+    nb_frames = 50
+}
+

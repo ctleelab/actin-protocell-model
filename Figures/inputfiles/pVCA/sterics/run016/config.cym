@@ -1,0 +1,145 @@
+set simul system
+{
+    time_step = 0.000001
+    steric = 1, 10, 0
+    
+    display = (style=1;)
+}
+
+set system display
+{
+    back_color = white
+}
+
+set space cell
+{
+    shape = dynamic_polygon
+    viscosity = 1.0
+    tension = 0.1 
+    bending = 0.08 
+    display = (color = gray;)
+}
+
+new cell
+{
+    radius = 4.308
+    order = 60  
+}
+
+set fiber actin
+{
+    rigidity = 0.068
+    segmentation = 0.055
+    confine = inside, 10, cell       % {on, inside, outside, in_out}, force constant, space
+
+    display = (size=20; color=green, gray;) 
+    steric = 1, 0.035
+    viscosity = 0.001
+
+    activity = grow
+    growing_speed = 0.033, 0        % plus end, minus end
+    shrinking_speed = 0, 0     % plus end, minus end
+    growing_force = 3, 1        % plus end, minus end
+    max_length = 0.75
+    min_length = 0.01
+
+}
+
+set fiber daughter
+{
+    rigidity = 0.068
+    segmentation = 0.055
+    confine = inside, 10, cell       % {on, inside, outside, in_out}, force constant, space
+
+    display = (size=20; color=green, gray;) 
+    steric = 1, 0.035
+    viscosity = 0.001
+
+    activity = grow
+    growing_speed = 0.033, 0        % plus end, minus end
+    shrinking_speed = 0, 0     % plus end, minus end
+    growing_force = 3, 1        % plus end, minus end
+    max_length = 0.75
+    min_length = 0.01
+}
+
+set hand binder
+{
+    binding_rate = 1 
+    binding_range = 0.2
+    unbinding = 0.001, inf
+    display = ( size=80; color=red; )
+}
+
+set hand nucleatorFormin
+{   
+    binding_range = 0.2
+    unbinding = 0
+    unbinding_force = inf
+    activity = nucleate
+    nucleate = 10, actin, (length=0.01; reference=minus_end; plus_end=grow; )
+    display = ( size=10; color=purple; )
+}
+
+set hand nucleatorpVCA
+{   
+    binding_range = 0.2
+    unbinding = 0.5
+    unbinding_force = 1
+    activity = nucleate
+    nucleate = 5, actin, (length=0.01; reference=plus_end; plus_end=grow; )
+    display = ( size=10; color=0x250001, 0x54577C; )
+}
+
+set hand nucleatorArp23
+{   
+    unbinding = 0.01
+    unbinding_force = inf
+    activity = nucleate
+    nucleate = 5, daughter, (length=0.01; reference=plus_end; plus_end=grow; )
+    display = ( size=10; color=0xFCBA04; )
+}
+
+set single formin
+{   
+    hand = nucleatorFormin
+    activity = anchor
+    stiffness = 1000
+    length = 0.08
+}
+
+set single PVCA
+{
+    hand = nucleatorpVCA
+    activity = anchor
+    stiffness = 1000
+    length = 0.08
+    confine = on, 0, cell
+}
+
+set couple arp23
+{
+    hand1 = binder
+    hand2 = nucleatorArp23
+    diffusion = 0.001
+    stiffness = 1000
+    activity = fork
+    torque = 0.5, 1.22     % 1.22 radian is 70 degrees
+    trans_activated = 1
+}
+
+new 50 PVCA
+{
+    position = arc 4.308 1.1 at 4.308 0 0
+    placement = surface, cell
+}
+
+new 50 arp23
+{
+    position = arc 4.308 1.0 at 4.298 0 0
+}
+
+run 5000000 system
+{
+    nb_frames = 100
+}

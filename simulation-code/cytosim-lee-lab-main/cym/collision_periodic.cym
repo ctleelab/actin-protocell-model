@@ -1,0 +1,103 @@
+% Growing and colliding microtubules in 3D
+% Maud Formanek 13.03.2020
+% FJN 10.06.2020
+
+set simul system
+{
+    dim = 3
+    time_step = 0.005
+    viscosity = 0.2
+    precondition = 1
+    steric = 1, 777
+    display = ( point_value=0.010; )
+}
+
+set space cell
+{
+    shape = semi_periodic
+}
+
+new cell
+{
+    length = 10, 10
+    bottom = 0
+    top = 2
+}
+
+set space base
+{
+    shape = semi_periodic
+}
+
+new base
+{
+    length = 10, 10
+    bottom = 0
+    top = 0
+}
+
+set fiber microtubule
+{
+    confine = on, 10, base   % apply always
+    confine2 = inside, 990, cell  % apply for Z<0 (need to be enabled)
+    steric = 1, 0.050
+    rigidity = 10.625
+    segmentation = 0.25
+
+    activity = dynamic
+    growing_speed = 0.3467
+    shrinking_speed = -0.7
+    growing_force = 1.4422
+    hydrolysis_rate = 0.4
+    
+    min_length = 0.01
+    persistent = 0
+    
+    display = ( line=2.5, 1; )
+}
+
+set hand anchor
+{
+    binding_rate = 10
+    binding_range = 0.010
+    unbinding_rate = 0.175
+    unbinding_force = 5.0625 
+    display = ( size=5; color=white; )
+}
+
+set single grafted
+{
+    hand = anchor
+    stiffness = 200
+    activity = fixed
+}
+
+
+set hand nucleator
+{
+    unbinding = 0, 3
+    activity = nucleate
+    nucleate = 1, microtubule, ( length=0.1; direction=XY; end_state=grow; )
+    display = ( size=7; color=yellow; )
+}
+
+set single creator
+{
+    confine = on,, base
+    hand = nucleator
+    diffusion = 1
+}
+
+new 20000 grafted ( XY 0 )
+new 200 creator
+
+report microtubule:plus_state states.txt { verbose = 1 }
+
+repeat 100
+{
+    run 200 system
+    {
+        nb_frames = 1
+    }
+    report microtubule:plus_state states.txt { verbose = 0; }
+}

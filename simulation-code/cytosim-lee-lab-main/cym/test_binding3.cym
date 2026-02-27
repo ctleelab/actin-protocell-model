@@ -1,0 +1,96 @@
+% A visual test for the binding of Hands
+% F. Nedelec, January 27th 2017
+
+set simul system
+{
+    time_step = 0.01
+}
+
+set system display
+{
+    point_size = 3
+    link_width = 1
+    report = single
+}
+
+set space cell
+{
+    shape = circle
+}
+
+set fiber microtubule1
+{
+    binding_key  = 1
+    segmentation = 1
+    rigidity     = 1
+}
+
+set hand binder1
+{
+    binding_key     = 1
+    binding_rate    = 1
+    binding_range   = 1
+    bind_also_end   = both_ends
+    unbinding       = 0, inf
+    display = ( color=blue, 0x0000FF77; width=1; )
+}
+
+set single simplex1
+{
+    hand = binder1
+    activity = fixed
+    stiffness = 0
+}
+
+set fiber microtubule2
+{
+    binding_key  = 2
+    segmentation = 1
+    rigidity     = 1
+}
+
+set hand binder2
+{
+    binding_key     = 2
+    binding_rate    = 1
+    binding_range   = 1
+    bind_also_end   = plus_end
+    unbinding       = 0, inf
+    display = ( color=yellow, 0xFFFF0077; width=1; )
+}
+
+set single simplex2
+{
+    hand = binder2
+    activity = fixed
+    stiffness = 0
+}
+
+
+new cell
+{
+    radius = 8
+}
+
+new microtubule1
+{
+    position = 0 0 0
+    direction = vertical
+    length = 10
+}
+
+new microtubule2
+{
+    position = 0 0 0
+    direction = horizontal
+    length = 10
+}
+
+new 10000 simplex1
+new 10000 simplex2
+
+run 1000 system
+{
+    nb_frames = 10
+    solve = 0
+}

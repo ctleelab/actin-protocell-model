@@ -1,0 +1,128 @@
+% Growing and colliding microtubules on the plant cortex (3D)
+% Maud Formanek 13.03.2020
+% FJN 16.06.2020
+
+
+set simul system
+{
+    dim = 3
+    time_step = 0.005
+    viscosity = 1
+    precondition = 0
+    steric = 1, 2500
+    display = ( style=3; point_value=0.010; floor=7,0.25,0; )
+}
+
+set space cell
+{
+    shape = cylinderZ
+    display = ( visible=0 )
+}
+
+set space inner_cell
+{
+    shape = cylinderZ
+    display = ( visible=0 )
+}
+
+new cell
+{
+    radius = 1.6
+    bottom = 0
+    top = 0.25
+}
+
+new inner_cell
+{
+    radius = 1.6
+    bottom = 0.050
+    top = 0.25
+}
+
+set fiber microtubule
+{
+    confine = on, 1, inner_cell
+    confine2 = inside, 2000, inner_cell
+    steric = 1, 0.025
+    rigidity = 10
+    segmentation = 0.1
+    
+    activity = dynamic
+    unit_length = 0.008
+    growing_speed = 0.18
+    shrinking_speed = -0.36
+    growing_force = 1.33
+    hydrolysis_rate = 0.29
+    max_length = 10 
+    min_length = 0.1
+    persistent = 1
+    display = ( line=2.5, 8; plus_end=7; length_scale=0.02; )
+}
+
+set fiber obstacle
+{
+    confine = on, 1, inner_cell
+    confine2 = inside, 2000, inner_cell
+    steric = 1, 0.025
+    rigidity = 10.625
+    segmentation = 0.1
+    activity = none
+    display = ( line=2.5, line; plus_end=2.5, tip; )
+}
+
+set hand anchor
+{
+    binding_rate = 6.9375 
+    binding_range = 0.050
+    unbinding_rate = 0.1
+    unbinding_force = 5.0
+    display = ( size=1; color=gray; )
+}
+
+set single grafted
+{
+    hand = anchor
+    stiffness = 200
+    activity = fixed
+}
+
+
+new 1 obstacle
+{
+    length = 3
+    position = -0.1 0 0.040
+    direction = 0 1 0
+}
+
+new 1 obstacle
+{
+    length = 3
+    position = 0.1 0 0.040
+    direction = 0 -1 0
+}
+
+new 1 microtubule
+{
+    length = 0.75
+    position = -1 -0.6 0.040
+    direction = 0.866 0.5 0
+    end_state = grow
+}
+
+new 1000 grafted ( XY 0.015 )
+
+run 100 system { solve = 0 }
+run 100 system
+set system { viscosity = 0.1 }
+
+
+report microtubule:plus_end * { verbose = 1 }
+
+repeat 100
+{
+    run 40 system
+    {
+        nb_frames=10
+    }
+    report microtubule:plus_end * { verbose = 0; }
+}
