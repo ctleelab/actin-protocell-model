@@ -12,6 +12,7 @@ actin-bracing-model/
 │── Figures/                        # Contains general inputs and outputs from simulations
 │   ├── inputfiles/                 # Cytosim config files used to simulate each condition
 │   ├── outputfiles/                # Final results used to make figures
+│   ├── LICENSE                     # CC BY 4.0 License file
 │
 │──Cytosim/                         # Modified source code used to simulate actin filaments with deformable membrane        
 │   ├── LICENSE                     # GNU GPL v3 License file 
@@ -64,7 +65,7 @@ The `pixi.lock` file is a human readable list of solved dependency versions.
 Changes to the lockfile are handled by pixi and reflect changes to the environment.
 
 ## License
-The analysis code is licensed under the **CC BY 4.0 International**. Cytosim is licensed under **GNU GPL v3**.
+The analysis code and input config files are licensed under the **CC BY 4.0 International**. Cytosim is licensed under **GNU GPL v3**.
 
 ## Contact
 If you have questions, feel free to reach out via:
