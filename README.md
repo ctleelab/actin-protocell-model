@@ -23,13 +23,13 @@ actin-bracing-model/
 
 ## 🚀 Installation
 
-### 1️⃣ Clone the Repository
+### 1 Clone the Repository
 ```sh
 git clone https://github.com/ctleelab/actin-bracing-model.git
 cd actin-bracing-model
 ```
 
-### 3️⃣ Install Cytosim
+### 2 Install Cytosim
 ```sh
 cd simulation-code/cytosim-lee-lab-main # Mac or Linux
 cd simulation-code\cytosim-lee-lab-main # Windows
