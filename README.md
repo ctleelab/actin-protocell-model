@@ -39,7 +39,7 @@ make dim2
 For further assistance with installation, please refer to [text](https://gitlab.com/f-nedelec/cytosim/-/blob/master/README.md\)
 
 ## Running analysis codes using pixi
-Simulation will generate `objects.cmo` files containing the coordinates of all filaments, actin binding proteins, and the membrane.
+Simulations will generate `objects.cmo` files containing the coordinates of all filaments, actin binding proteins, and the membrane.
 
 [Pixi](https://pixi.sh/) is a package management tool that helps to harmonize conda and pypi dependencies.
 It also provides benefits such as preconfigured tasks and pipelining.
@@ -51,7 +51,7 @@ Once pixi is installed you can
 cd analysis-codes
 ``` 
 and simply run:
-1. `pixi run python extract-space.py --save_dir \path\to\folder\containing\all\sim\output` # to extract the membrane coordinates from each replicate folder.
+1. `pixi run python extract-space.py --save_dir \path\to\folder\containing\all\sim\output` to extract the membrane coordinates from each replicate folder.
 2. `pixi run python membrane_extension_calculation.py save_dir \path\to\folder\containing\all\sim\output` to calculate the membrane deformation for each replicate.
 3. `pixi run makeplot` to plot the result. We import tools from another repository [ctleelab-mpl-utilites](https://github.com/ctleelab/ctleelab-mpl-utilities) for figure generation. This is automatically installed with `Pixi`.
 
