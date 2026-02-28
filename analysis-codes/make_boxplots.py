@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Generate boxplots of membrane extension for different conditions.
 """

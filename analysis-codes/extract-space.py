@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Extract space data from all replicates folders in a save directory.
 

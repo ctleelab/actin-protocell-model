@@ -9,14 +9,20 @@ This repository provides tools for:
 ## Repository Structure
 ```
 actin-bracing-model/
-│── Figures/                          # Contains general inputs and outputs from simulations
-│   ├── inputfiles/                       # Cytosim config files used to simulate each condition
+│── Figures/                        # Contains general inputs and outputs from simulations
+│   ├── inputfiles/                 # Cytosim config files used to simulate each condition
 │   ├── outputfiles/                # Final results used to make figures
+│   ├── LICENSE                     # CC BY-SA 4.0 License file
 │
-│──Cytosim/                           # Source code used to simulate actin filaments with deformable membrane
-│
+│──Cytosim/                         # Modified source code used to simulate actin filaments with deformable membrane        
+│   ├── LICENSE                     # GNU GPL v3 License file 
+│   ├── source code files                 
+│  
+│── analysis-codes/                 # Contains scripts used to generate membrane deformation and figures from simulations
+│   ├── LICENSE                     # CC BY-SA 4.0 License file
+│   ├── scripts
+│ 
 │── README.md                       # Project documentation
-│── LICENSE                         # MIT License file
 │── ./gitignore                     # Files to ignore
 ```
 
@@ -59,7 +65,7 @@ The `pixi.lock` file is a human readable list of solved dependency versions.
 Changes to the lockfile are handled by pixi and reflect changes to the environment.
 
 ## License
-This project is licensed under the **MIT License**.
+The analysis code and input config files are licensed under the **CC BY-SA 4.0 International**. Cytosim is licensed under **GNU GPL v3**.
 
 ## Contact
 If you have questions, feel free to reach out via:
