@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-Copyright (c) 2026 Honor Akenuwa, Christopher T. Lee, ctleelab
-
-This work is licensed under the Creative Commons Attribution 4.0 International License.
-To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/
-
-"""
 
 """
 Membrane Extension Calculator
