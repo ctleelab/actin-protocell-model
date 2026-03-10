@@ -28,13 +28,13 @@ actin-bracing-model/
 
 ## Installation
 
-### 1 Clone the Repository
+### 1. Clone the Repository
 ```sh
 git clone https://github.com/ctleelab/actin-bracing-model.git
 cd actin-bracing-model
 ```
 
-### 2 Install Cytosim
+### 2. Install Cytosim
 ```sh
 cd Cytosim
 make clean
