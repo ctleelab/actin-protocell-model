@@ -38,6 +38,8 @@ public:
     // preferred volume of the polygon (units of um^3)
     real V_bar;
     
+    real cutoff; // cutoff distance for steric interaction (units of um)
+    
     // volume of the polygon (mutable because changed by const method)
     mutable real volume;
     

@@ -12,14 +12,17 @@ actin-bracing-model/
 │── Figures/                        # Contains general inputs and outputs from simulations
 │   ├── inputfiles/                 # Cytosim config files used to simulate each condition
 │   ├── outputfiles/                # Final results used to make figures
-│   ├── LICENSE                     # CC BY-SA 4.0 License file
 │
 │──Cytosim/                         # Modified source code used to simulate actin filaments with deformable membrane        
 │   ├── LICENSE                     # GNU GPL v3 License file 
 │   ├── source code files                 
 │  
+│──protocell-adhesion-protrusion/   # Source code used to simulate the interplay between GUV-substrate adhesion strength and actin protrusion
+│   ├── LICENSE                     # GNU GPL v3 License file 
+│  
+│ 
 │── analysis-codes/                 # Contains scripts used to generate membrane deformation and figures from simulations
-│   ├── LICENSE                     # CC BY-SA 4.0 License file
+│   ├── LICENSE                     # CC BY 4.0 License file
 │   ├── scripts
 │ 
 │── README.md                       # Project documentation
@@ -59,13 +62,17 @@ and simply run:
 2. `pixi run python membrane_extension_calculation.py save_dir \path\to\folder\containing\all\sim\output` to calculate the membrane deformation for each replicate.
 3. `pixi run makeplot` to plot the result. We import tools from another repository [ctleelab-mpl-utilites](https://github.com/ctleelab/ctleelab-mpl-utilities) for figure generation. This is automatically installed with `Pixi`.
 
+To run the protocell adhesion-protrusion probe, change directories to the protocell-adhesion-protrusion folder and run `pixi run python protocell-contact-probe.py` to run the parameter sets used in the manuscript. 
+
+To plot the snapshots and results, run `pixi run python protocell-contact-probe.py --plot`.
+
 The tasks, dependency specificiations, and other configurations can be found in `pixi.toml`. 
 Notably, changes to this file can be done by hand or by the pixi cli tool.
 The `pixi.lock` file is a human readable list of solved dependency versions.
 Changes to the lockfile are handled by pixi and reflect changes to the environment.
 
 ## License
-The analysis code and input config files are licensed under the **CC BY-SA 4.0 International**. Cytosim is licensed under **GNU GPL v3**.
+The analysis code is licensed under the **CC BY 4.0 International**. Cytosim is licensed under **GNU GPL v3**.
 
 ## Contact
 If you have questions, feel free to reach out via:

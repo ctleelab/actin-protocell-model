@@ -92,7 +92,7 @@ void SpaceDynamicProp::clear()
     bending       = 0;
     Kv            = 0;
     V_bar         = 0;
-    
+    cutoff        = 0.0035;
     mobility_dt     = 0;
     mobility_rot_dt = 0;
 }
@@ -108,6 +108,7 @@ void SpaceDynamicProp::read(Glossary& glos)
     glos.set(bending,       "bending");
     glos.set(Kv,       "Kv");
     glos.set(V_bar,       "V_bar");
+    glos.set(cutoff,       "cutoff");
 }
 
 
@@ -137,6 +138,9 @@ void SpaceDynamicProp::complete(Simul const& sim)
 
     if ( V_bar < 0 )
         throw InvalidParameter("V_bar must be >= 0");
+    
+    if ( cutoff <= 0 )
+        throw InvalidParameter("cutoff must be > 0");
 }
 
 
@@ -149,5 +153,6 @@ void SpaceDynamicProp::write_values(std::ostream& os) const
     write_value(os, "bending",   bending);
     write_value(os, "Kv",      Kv);
     write_value(os, "V_bar",      V_bar);
+    write_value(os, "cutoff",      cutoff);
 }
 

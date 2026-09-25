@@ -9,7 +9,7 @@ MACHINE := auto
 COMPILER := gcc
 
 #---------------- MODE = {F = Fast; D = Debug; P = Profiling; C = Coverage}
-MODE := D
+MODE := F
 
 #---------------- INTEL Math Kernel Library
 # If the Intel Math Kernel library is a free library providing BLAS+LAPACK,
@@ -174,7 +174,7 @@ ifeq ($(MACHINE),mac)
 
     LINK   := -framework Accelerate $(OMPLIB) $(LIBRARIES)
 
-    GRAFIX := -framework GLUT -framework OpenGL -framework AGL
+    GRAFIX := -framework GLUT -framework OpenGL
     # Using brew's freeGLUT:
     #GRAFIX := -L/usr/local/Cellar/freeglut/3.0.0 -lglut -framework OpenGL
     
