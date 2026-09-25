@@ -27,10 +27,18 @@ inline std::vector<Vector2> operator*(real x, const std::vector<Vector2> &v) {
   return res;
 }
 
-/// A deformable 2-D polygon around the Z axis
+/// an axisymmetric volume obtained by rotating a polygon around the Z axis
 /**
+ This is only valid in 3D.
+ The volume is built by rotating a closed 2D polygon around the Z axis.
  
- The coordinates of the 2D polygon (X Z) can be determined from a radius and number of points or can be read from a file.
+ The coordinates of the 2D polygon (X Z) are read from a file.
+ The offset `shift` is added to the X-coordinate before the polygon is rotated around Z.
+ Volume is estimated by Monte-Carlo, and takes an instant.
+ 
+ Parameters:
+     - file: name of file with polygon data
+    .
 
  @ingroup SpaceGroup
 */
@@ -42,8 +50,9 @@ private:
     /// The 2D polygon
     Polygon poly_;
 
-    mutable std::vector<Vector2> vertex_forces; 
-    
+    mutable std::vector<Vector2> vertex_forces;
+
+
     /// pre-calculated bounding box since this is called often
     Vector inf_, sup_;
     
@@ -53,10 +62,24 @@ private:
     /// half the total height in Z
     real height_;
 
+    //Pointer to a mecable object (in this case fiber segment)
+    // Mecable* mec_;
 
-    void reset_forces(){
+    //Index of the point of interest
+    // unsigned pti_;
+
+    //mobility
+    // real mobility_dt;
+
+    void reset_forces() const {
 
         vertex_forces.assign(vertex_forces.size(), Vector2(0,0));
+
+        // for( auto v : vertex_forces){
+        //     v = Vector2(0,0);
+        // }
+        // Use in C++20
+        // std::fill(vertex_forces.begin(), vertex_forces.end(), {0,0});
     }
 
     //Add forces to vertices: takes in a vector2 force and a vertex index
@@ -64,9 +87,17 @@ private:
         vertex_forces[pos] += force;
     }
 
-    /// update polygon shape and bounding box after vertices have been moved
-    void update();
+    /**
+     Closest point of polygon edge `j` to `P`.
+     */
+    real edgeProjection(unsigned j, Vector2 const& P, Vector2& b, real& da) const;
 
+    /// mean edge length, the length scale the adaptive sub-step is measured in
+    real meanEdge() const;
+
+
+    /// update data structure
+    void update();
 
 public:
 
@@ -88,6 +119,8 @@ public:
     /// return bounding box in `inf` and `sup`
     void boundaries(Vector& inf, Vector& sup) const { inf=inf_; sup=sup_; }
     
+    /// the volume inside
+    // real volume() const { return volume_; }
     
     /// the volume inside - 2D version
     real volume2D() const;
@@ -98,15 +131,24 @@ public:
     /// return point on the edge that is closest to `pos`
     Vector project(Vector const& pos) const;
 
+    /**
+     Signed distance to the membrane: >= 0 inside, negative outside.
+     */
+    real depthBelowMobileEdge(Vector const& pos) const;
+
+    /**
+     Exact OUTWARD normal, overriding Space::normalToEdge().
+     */
+    Vector normalToEdge(Vector const& pos) const;
+
+
     /// a random position inside the volume
     Vector place() const;
 
     /// apply a force directed towards the edge of the Space
     void setConfinement(Vector const&pos, Mecapoint const& mp, Meca& meca, real stiff) const;
-    
-    /// add interactions between fibers and reentrant corners
-    void setInteractions(Meca&, Simul const&);
-    
+
+
     /// write to file
     void write(Outputter&) const;
 
@@ -125,6 +167,9 @@ public:
     //Update the polygon shape
     void step();
 
+    ///compute osmotic energy
+    // real _osmotic_energy() const;
+
     /// OpenGL display function
     void drawPolygon(float, float) const;
 
@@ -137,17 +182,36 @@ public:
     /// Test membrane mechanics function
     std::tuple<double, double> _energy() const; // _energy(const std::vector<std::array<double, 2>>& vertex_positions)
 
-    //calculate forces using ddg derivative with respect to vertex positions
+    ///compute energy of the membrane using Helfrich Hamiltonian
+    // real _energy(autodiff::ArrayXreal&) const;
+
+    ///compute osmotic energy of the membrane using vant Hoff equation
+    real _osmotic_energy() const;
+
+    ///calculate forces using ddg derivative with respect to vertex positions
 
     std::vector<Vector2> calculateOsmoticForces() const;
 
     std::vector<Vector2> calculateTensionForces() const;
 
     std::vector<Vector2> calculateRegularizationForces() const;
-
-    std::vector<Vector2> calculateBendingForces() const;
-
     std::vector<Vector2> calculateBendingForces_optimized() const;
+
+    /**
+     Test to show that the energies match the force kernels above, term by term.
+     */
+    real energyTension() const;
+    real energyBending() const;
+    real energyRegularization() const;
+    real energyOsmotic() const;
+
+    /// sum of the four; the membrane's own potential energy
+    real totalEnergy() const;
+
+    /// finite-difference check that -dE/dx matches each force kernel
+    void selfTest(std::ostream&) const;
+
+
 };
 
 #endif

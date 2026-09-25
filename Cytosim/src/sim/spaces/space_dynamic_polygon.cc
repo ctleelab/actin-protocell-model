@@ -1,4 +1,7 @@
 // Cytosim was created by Francois Nedelec. Copyright 2007-2017 EMBL.
+// Note: membrane deformation parameter (/mu_membrane) is not robust to changes in tension and bending rigidity
+// The equilibrium radius for a given tension and bending depends on the membrane deformation parameter
+// Early testing suggests some benchmarking to find the right membrane deformation parameter for desired polygon radius at each set of tension and bending parameters
 
 
 #include "dim.h"
@@ -74,6 +77,8 @@ void SpaceDynPolygon::resize(Glossary& opt)
 
         resize_force(ord);
 
+        //std::clog<<"polygon:order="<<ord<<", radius="<<rad<<", angle="<<ang<<std::endl;
+
     }
     else
         return;
@@ -102,31 +107,43 @@ void SpaceDynPolygon::resize_force(unsigned num_vertices) // Initialize with zer
 {
     vertex_forces.resize(num_vertices);
     reset_forces();
+    // for (std::size_t i = 0; i < num_vertices; ++i)
+    //     {
+    //         vertex_forces.push_back(Vector2(0,0));
+    //     } 
 }
 
 //-----------------------------------Energy and Forces section of space dynamic polygon-------------------------------------------//
-// Calculate the energy and forces from osmotic pressure acting on each vertex the polygon using van't hoff approximation 
-// for osmotic pressure and assuming a preferred volume V_bar for the polygon
+// Calculate the energy and forces from osmotic pressure acting on each vertex the polygon
 
+real SpaceDynPolygon::_osmotic_energy() const
+{   
+    double Kv = 0.0; // prop()->Kv; osmotic strength in units of mN.um;
+    double V_bar = 0.0; // prop()->V_bar; preferred volume in units of um^3;
+
+    real volume = poly_.surface();
+    double osmotic_energy = 0.0;
+
+    osmotic_energy = Kv * ((volume/V_bar) - 1 - log(volume/V_bar));
+    return osmotic_energy;
+} 
 
 std::vector<Vector2> SpaceDynPolygon::calculateOsmoticForces() const {
 
     real Kv = prop()->Kv; //osmotic strength in units of nN.um;
 
-    real V_bar = prop()->V_bar; //preferred volume in units of um^3;
+    real V_bar = prop()->V_bar;
+
+    if ( Kv == 0 )
+        return std::vector<Vector2>(poly_.nbPoints(), Vector2(0,0));
 
     real volume = abs_real(poly_.surface());
-
-    if(V_bar <= 0)
-    {
-        
-        V_bar = volume; // if preferred volume is not set, use current volume
-    }
+    //std::clog<<"Surface Area: "<<volume<<std::endl;
 
     std::vector<Vector2> osmoticForce(poly_.nbPoints());
     osmoticForce.assign(poly_.nbPoints(), Vector2(0,0));
 
-    size_t n = poly_.nbPoints();
+    size_t n = poly_.nbPoints(); // vertex_positions.size();
     
     Vector2 d;
     std::vector<real> edgeLengths(n);
@@ -134,6 +151,7 @@ std::vector<Vector2> SpaceDynPolygon::calculateOsmoticForces() const {
 
     for (size_t i = 0; i < n; ++i) {
 
+        // std::clog<<"Vertex ["<<i<<"]: "<<poly_.pts_[i].xx<<", "<<poly_.pts_[i].yy<<std::endl;
 
         d.XX = poly_.pts_[(i + 1) % n].xx - poly_.pts_[i].xx;
         d.YY = poly_.pts_[(i + 1) % n].yy - poly_.pts_[i].yy;
@@ -141,7 +159,7 @@ std::vector<Vector2> SpaceDynPolygon::calculateOsmoticForces() const {
 
         //Calculate the edge normals. Assumes a clockwise orientation convention of the edge normal vectors
         edge_normal[i].XX =  d.YY / edgeLengths[i];
-        edge_normal[i].YY = -1 * d.XX / edgeLengths[i];  
+        edge_normal[i].YY = -1 * d.XX / edgeLengths[i]; // / (edgeLengths[i] * edgeLengths[i]);    
     }
 
     for (size_t i = 0; i < n; ++i) 
@@ -155,7 +173,7 @@ std::vector<Vector2> SpaceDynPolygon::calculateOsmoticForces() const {
         Vector2 vertex_normal = 0.5 * ((edge_normal[i] * edgeLengths[i]) + (edge_normal[j] * edgeLengths[j]));
 
         osmoticForce[i] = Kv * ((1.0/volume) - (1.0/V_bar)) * vertex_normal;
-
+        // std::clog<<"Osmotic forces [" << i << "], ["<< j << "]: "<<osmoticForce[i].XX << ", " << osmoticForce[i].YY << std::endl;
     }
 
   return osmoticForce;
@@ -222,84 +240,64 @@ std::vector<Vector2> SpaceDynPolygon::calculateRegularizationForces() const {
     } else {
         regForce[i + 1] += -2 * Ksl * edgeUnitVector[i] * (edgeLength[i] - referenceLength) / (referenceLength * referenceLength);
     }
+    // std::clog << "Regularization forces: "<< regForce[i].XX << ", " << regForce[i].YY << std::endl;
  }
 
   return regForce;
 }
 
-
 std::vector<Vector2> SpaceDynPolygon::calculateBendingForces_optimized() const
 {
-    double Kb = prop()->bending / 4;
+    const real Kb = prop()->bending / 4;
+    const size_t n = poly_.nbPoints();
 
-    size_t n = poly_.nbPoints(); // vertex_positions.size();
-   
-    std::vector<Vector2> bendingForce(n); 
-    bendingForce.assign(bendingForce.size(), Vector2(0,0));
+    std::vector<Vector2> bendingForce(n, Vector2(0,0));
+    if ( n < 3 )
+        return bendingForce;
 
-    Vector2 d_pos;
-    std::vector<real> edgeLengths(n);
-    std::vector<Vector2> edge_normal(n);
-    std::vector<real> edgeAbsoluteAngles(n);
-    std::vector<Vector2> edgeUnitVectors(n); 
-    std::vector<real> tan_vertex_turning_angles(n);
-    std::vector<real> cotan_vertex_turning_angles(n);
+    std::vector<real> L(n), ang(n), T(n), c(n);
+    std::vector<Vector2> u(n), nrm(n);
 
-    for (size_t i = 0; i < n; ++i) {
-        d_pos.XX = poly_.pts_[(i + 1) % n].xx - poly_.pts_[i].xx;
-        d_pos.YY = poly_.pts_[(i + 1) % n].yy - poly_.pts_[i].yy;
-
-        edgeLengths[i] = d_pos.norm();
-
-        //Calculate the edge normals. Assumes a clockwise orientation convention of the edge normal vectors
-        edge_normal[i].XX = d_pos.YY / (edgeLengths[i] * edgeLengths[i]);
-        edge_normal[i].YY = -1 * d_pos.XX / (edgeLengths[i] * edgeLengths[i]); 
-       
-        
-
-        edgeAbsoluteAngles[i] = std::atan2(d_pos.YY, d_pos.XX);
-        edgeUnitVectors[i] = (1 / edgeLengths[i]) * d_pos;
-        
+    for ( size_t i = 0; i < n; ++i )
+    {
+        real dx = poly_.pts_[(i+1)%n].xx - poly_.pts_[i].xx;
+        real dy = poly_.pts_[(i+1)%n].yy - poly_.pts_[i].yy;
+        L[i] = std::sqrt(dx*dx + dy*dy);
+        u[i] = Vector2(dx/L[i], dy/L[i]);
+        nrm[i] = Vector2(dy/(L[i]*L[i]), -dx/(L[i]*L[i]));
+        ang[i] = std::atan2(dy, dx);
     }
 
-    for (size_t i = 0, j = n-1; i < n; ++i, ++j) {
-        if (j == n) 
-        {
-            j = 0;
-        }
-        real vertexTurningAngle = fmod(edgeAbsoluteAngles[j] - edgeAbsoluteAngles[i], 2 * M_PI);
-        vertexTurningAngle = fmod(vertexTurningAngle + M_PI, 2 * M_PI) - M_PI;
-
-        tan_vertex_turning_angles[i] = std::tan(vertexTurningAngle / 2);
-        cotan_vertex_turning_angles[i] = std::pow(cos(vertexTurningAngle / 2), -2);  
-
+    for ( size_t i = 0; i < n; ++i )
+    {
+        const size_t j = (i + n - 1) % n;               // previous edge
+        real a = std::fmod(ang[j] - ang[i], 2*M_PI);
+        a = std::fmod(a + M_PI, 2*M_PI) - M_PI;         // wrap to (-pi, pi]
+        T[i] = std::tan(a/2);
+        const real sec = 1 / std::cos(a/2);
+        c[i] = 0.5 * sec * sec;
     }
 
-    for (size_t i = 0, j = 1; i < n; ++i, ++j) {
-        if (j == n) 
-            j = 0;
+    for ( size_t i = 0; i < n; ++i )
+    {
+        const size_t im = (i + n - 1) % n;
+        const size_t i1 = (i + 1) % n;
+        const size_t i2 = (i + 2) % n;
 
-        real edgeCurvature = (tan_vertex_turning_angles[i] + tan_vertex_turning_angles[j]) / edgeLengths[i]; 
+        const real kap = ( T[i] + T[i1] ) / L[i];
+        const real g   = 2 * kap;                       // dE/dS, less Kb
+        const real k2  = kap * kap;                     // dE/d(1/L), less Kb
 
+        bendingForce[im] += -Kb * ( g * c[i] * nrm[im] );
 
-        Vector2 dki_squared_j = 2 * edgeLengths[i] * edgeCurvature * (0.5 * ((cotan_vertex_turning_angles[i] * -1 * edge_normal[i])) - (edgeCurvature * -1 * edgeUnitVectors[i])); // + (cotan_vertex_turning_angles2[i] * edge_normal2[i])
-        Vector2 dli_j = edgeCurvature * edgeCurvature * -1 * 2 * edgeLengths[i] * edgeUnitVectors[i];
-        
-        Vector2 dki_squared_j1 = 2 * edgeLengths[i] * edgeCurvature * ((0.5 * ((cotan_vertex_turning_angles[i] * (edge_normal[i] + edge_normal[j])) + (cotan_vertex_turning_angles[j] * edge_normal[j]))) - (edgeCurvature * edgeUnitVectors[i]));
-        Vector2 dli_j1 = edgeCurvature * edgeCurvature * 2 * edgeLengths[i] * edgeUnitVectors[i];
+        bendingForce[i]  += -Kb * ( g * ( -c[i]*nrm[im] - c[i]*nrm[i] + c[i1]*nrm[i] )
+                                    + k2 * u[i] );
 
-        bendingForce[i] += -1 * Kb * (dki_squared_j + dli_j);
+        bendingForce[i1] += -Kb * ( g * ( c[i]*nrm[i] - c[i1]*nrm[i] - c[i1]*nrm[i1] )
+                                    - k2 * u[i] );
 
-        if(i == n - 1)
-        {
-            bendingForce[0] += -1 * Kb * (dki_squared_j1 + dli_j1);
-        }
-        else
-        {
-            bendingForce[i+1] += -1 * Kb * (dki_squared_j1 + dli_j1);
-        }
-
-    }   
+        bendingForce[i2] += -Kb * ( g * c[i1] * nrm[i1] );
+    }
     return bendingForce;
 }
 
@@ -311,11 +309,12 @@ void SpaceDynPolygon::update()
     surface_ = poly_.surface();
     if ( surface_ < 0 )
     {
+        //std::clog << "flipping clockwise polygon `" << file << "'" << '\n';
         poly_.flip();
         surface_ = poly_.surface();
     }
     assert_true( surface_ > 0 );
-    
+
     if ( poly_.complete(REAL_EPSILON) )
         throw InvalidParameter("unfit polygon: consecutive points may overlap");
 
@@ -326,20 +325,37 @@ void SpaceDynPolygon::update()
 
 }
 
+real SpaceDynPolygon::meanEdge() const {
+  const unsigned n = poly_.nbPoints();
+  if (n < 2)
+    return 0;
+  real s = 0;
+  for (unsigned i = 0; i < n; ++i) {
+    real dx = poly_.pts_[i + 1].xx - poly_.pts_[i].xx;
+    real dy = poly_.pts_[i + 1].yy - poly_.pts_[i].yy;
+    s += std::sqrt(dx * dx + dy * dy);
+  }
+  return s / n;
+}
+
+
 void SpaceDynPolygon::step() {
-  std::vector<Vector2> step(
-      prop()->mobility_dt *
-      (calculateTensionForces() + calculateBendingForces_optimized() 
-       + calculateRegularizationForces() + calculateOsmoticForces() + vertex_forces));
+  
+  std::vector<Vector2> force(
+        calculateTensionForces() + calculateBendingForces_optimized()
+        + vertex_forces + calculateRegularizationForces() + calculateOsmoticForces());
 
   for (unsigned i = 0; i < poly_.nbPoints(); ++i) {
-    poly_.pts_[i].xx += step[i].XX;
-    poly_.pts_[i].yy += step[i].YY;
-  }
+      poly_.pts_[i].xx += prop()->mobility_dt * force[i].XX;
+      poly_.pts_[i].yy += prop()->mobility_dt * force[i].YY;
+    }
 
   poly_.wrap();
+  update();
+
   reset_forces();
 }
+
 
 bool SpaceDynPolygon::inside(Vector const& W) const
 {
@@ -411,79 +427,102 @@ Vector SpaceDynPolygon::project(Vector const& W) const
     return P;
 }
 
+real SpaceDynPolygon::depthBelowMobileEdge(Vector const& pos) const
+{
+    const real d = ( pos - project(pos) ).norm();
+    return inside(pos) ? d : -d;
+}
+
+
+Vector SpaceDynPolygon::normalToEdge(Vector const& pos) const
+{
+    Vector prj = project(pos);
+    Vector d = pos - prj;
+    real n2 = d.normSqr();
+
+    if ( n2 > square(1024*REAL_EPSILON) )
+    {
+        Vector u = d / std::sqrt(n2);
+        return inside(pos) ? -u : u;        // outward
+    }
+
+    unsigned best = 0;
+    real bestDa = INFINITY;
+    Vector2 P(pos.XX, pos.YY);
+    for ( unsigned j = 0; j < poly_.nbPoints(); ++j )
+    {
+        Vector2 b;
+        real da;
+        edgeProjection(j, P, b, da);
+        if ( da < bestDa ) { bestDa = da; best = j; }
+    }
+
+    // update() keeps the polygon anti-clockwise, for which (dy, -dx) is outward
+    Vector n(poly_.pts_[best].dy, -poly_.pts_[best].dx, 0);
+    if ( inside(prj + 0.0001 * n) )
+        n = -n;
+    return n;
+}
+
+
 //------------------------------------------------------------------------------
 #pragma mark - setConfinement
 
-void SpaceDynPolygon::setInteractions(Meca&, Simul const&)
+real SpaceDynPolygon::edgeProjection(unsigned j, Vector2 const& P,
+                                     Vector2& b, real& da) const
 {
-    reset_forces();
+    real x = P.XX - poly_.pts_[j].xx;
+    real y = P.YY - poly_.pts_[j].yy;
+
+    // abscissa of the projection on segment [j, j+1], clamped to the segment
+    real a = poly_.pts_[j].dx * x + poly_.pts_[j].dy * y;
+    a = std::min(poly_.pts_[j].len, std::max(real(0), a));
+
+    b.XX = x - a * poly_.pts_[j].dx;
+    b.YY = y - a * poly_.pts_[j].dy;
+    da = b.norm();
+    return a;
 }
 
+
+/**
+ Force on the filament point from the membrane and vice versa
+ */
 void SpaceDynPolygon::setConfinement(Vector const&pos, Mecapoint const& mp,
                                          Meca& meca, real stiff) const
 {
-    real cutoff = 0.0035; // cutoff for steric interactions between membrane and fibers, based on typical fiber radius of 3.5 nm
-    Vector prj;
-    prj = project(pos);
-    Vector dir = pos - prj;
-    real n = dir.normSqr();
-    
-    size_t npoints = poly_.nbPoints();
+    const real cutoff = prop()->cutoff;
+    const size_t npoints = poly_.nbPoints();
     Vector2 P(pos.XX, pos.YY);
-    int inside = poly_.insideWinding(P.XX, P.YY);
 
-    for (unsigned j = 0; j < npoints; ++j)
-        {   
+    // only points that have escaped the polygon are pushed back
+    if ( poly_.insideWinding(P.XX, P.YY) != 0 )
+        return;
 
-            real x = P.XX - poly_.pts_[j].xx;
-            real y = P.YY - poly_.pts_[j].yy;
-            
-            real a = poly_.pts_[j].dx * x + poly_.pts_[j].dy * y;
+    // closest point of the whole membrane
+    unsigned best = npoints;
+    real bestDa = INFINITY, bestA = 0;
+    Vector2 bestB(0,0);
+    for ( unsigned j = 0; j < npoints; ++j )
+    {
+        Vector2 b;
+        real da;
+        real a = edgeProjection(j, P, b, da);
+        if ( da < bestDa ) { bestDa = da; bestB = b; bestA = a; best = j; }
+    }
+    if ( best >= npoints || bestDa <= 0 )
+        return;
 
-            if (a < 0)
-            {
-                // projection is before the segment
-                a = 0;
-            }
-            if (a > poly_.pts_[j].len)
-            {
-                // projection is after the segment
-                a = poly_.pts_[j].len;
-            }
+    meca.addForce(mp, -stiff * Vector(bestB.XX, bestB.YY, 0));
 
-            Vector proj(poly_.pts_[j].xx + a * poly_.pts_[j].dx, poly_.pts_[j].yy + a * poly_.pts_[j].dy, 0.0);
-            
-            // distance to the segment:
-            Vector b = pos - proj;
-            real da = b.norm();
+    if ( bestDa < cutoff )
+    {
+        const real len = poly_.pts_[best].len;
+        const unsigned k = ( best + 1 == npoints ) ? 0 : best + 1;
 
-            Vector2 b2 = Vector2(b.XX, b.YY);
-
-            real len = poly_.pts_[j].len;
-            real len1 = (len - a)/len;
-            real len2 = a/len;
-
-            if ( da > 0 && da < cutoff )
-            {
-                if (inside == 0)
-                {
-                    // Register the force to the membrane edge
-                    decomposeForce(len1 * stiff * b2, j);
-
-                    if(j == npoints - 1)
-                    {
-                        decomposeForce(len2 * stiff * b2, 0);
-                    }
-                    else
-                    {
-                        decomposeForce(len2 * stiff * b2, j+1);
-                    }
-                }
-            }
-            //And to the meca
-            meca.addPlaneClamp(mp, prj, dir, stiff/n);
-        }
-    
+        decomposeForce(((len - bestA) / len) * stiff * bestB, best);
+        decomposeForce((bestA / len) * stiff * bestB, k);
+    }
 }
 
 
@@ -494,6 +533,9 @@ void SpaceDynPolygon::write(Outputter &out) const {
     
     writeMarker(out, TAG);
     writeShape(out, "dynamic_polygon");
+    
+    // out.put_characters("dynaPoly", 16);
+    // out.writeUInt8(poly_.closed);
     
     out.writeUInt32(poly_.nbPoints());
     for (int i = 0; i < poly_.nbPoints(); i++) {
@@ -508,6 +550,7 @@ void SpaceDynPolygon::read(Inputter &in, Simul &, ObjectTag) {
     
     std::string str, str2;
     str = in.get_characters(16); // stored as 16 characters
+    // str2 = in.get_characters(16);
 
     // check that this matches current Space:
     if (str.compare(0, 15, "dynamic_polygon")) {
@@ -516,21 +559,20 @@ void SpaceDynPolygon::read(Inputter &in, Simul &, ObjectTag) {
         oss << " in objects and " << prop()->shape << " in property";
         throw InvalidIO(oss.str());
     }
-
-
+    // poly_.closed = in.readUInt8();
+    // n is the total number of points in the polygon
     poly_.npts_ = in.readUInt32();
     poly_.allocate(poly_.npts_);
     unsigned int n = poly_.npts_;
-
     // Read in 2*n corresponding to x1, y1, x2, y2 .. xn, yn
     for (int i = 0; i < poly_.npts_; ++i) {
         poly_.pts_[i].xx = in.readFloat();
         poly_.pts_[i].yy = in.readFloat();
+
     }
 
     update();
     resize_force(n); // resize forces to fit number of polygon vertices
-
 }
 
 void SpaceDynPolygon::setLengths(const real len[8])
@@ -538,11 +580,15 @@ void SpaceDynPolygon::setLengths(const real len[8])
     height_ = len[0];
 }
 
-void SpaceDynPolygon::report(std::ostream& os) const 
-{   
+void SpaceDynPolygon::report(std::ostream& os) const
+{
+    // enclosed area as the membrane itself sees it: this is the `volume' that
+    // drives the osmotic term against V_bar, so it is worth being able to read
+    os << " nbPoints " << poly_.nbPoints() << " surface " << poly_.surface();
     for (int i = 0; i < poly_.nbPoints(); i++) {
         os << "\n" << poly_.pts_[i].xx <<"\t" << poly_.pts_[i].yy;
-
+        // currently don't print out info
+        // out.writeInt32(poly_.pts_[i].info);
     }
 }
 
@@ -619,3 +665,172 @@ void SpaceDynPolygon::drawPolygon(float, float) const {}
 void SpaceDynPolygon::draw3D() const {}
 
 #endif
+
+//------------------------------------------------------------------------------
+#pragma mark - Energies (must match the force kernels above)
+
+/**
+ E = Ksg * sum_i L_i^2
+ */
+real SpaceDynPolygon::energyTension() const
+{
+    const real Ksg = prop()->tension;
+    const size_t n = poly_.nbPoints();
+    real E = 0;
+    for ( size_t i = 0; i < n; ++i )
+    {
+        real dx = poly_.pts_[(i+1)%n].xx - poly_.pts_[i].xx;
+        real dy = poly_.pts_[(i+1)%n].yy - poly_.pts_[i].yy;
+        E += Ksg * ( dx*dx + dy*dy );
+    }
+    return E;
+}
+
+
+/**
+ E = Ksl * sum_i (L_i - L_mean)^2 / L_mean^2,
+ */
+real SpaceDynPolygon::energyRegularization() const
+{
+    const real Ksl = 20.0;
+    const size_t n = poly_.nbPoints();
+    std::vector<real> L(n);
+    real ref = 0;
+    for ( size_t i = 0; i < n; ++i )
+    {
+        real dx = poly_.pts_[(i+1)%n].xx - poly_.pts_[i].xx;
+        real dy = poly_.pts_[(i+1)%n].yy - poly_.pts_[i].yy;
+        L[i] = std::sqrt(dx*dx + dy*dy);
+        ref += L[i];
+    }
+    ref /= n;
+    real E = 0;
+    for ( size_t i = 0; i < n; ++i )
+        E += Ksl * (L[i]-ref) * (L[i]-ref) / ( ref * ref );
+    return E;
+}
+
+
+/**
+ E = Kb * sum_i kappa_i^2 L_i,  kappa_i = (tan(t_i/2) + tan(t_{i+1}/2)) / L_i,
+ with Kb = bending/4 and t_i the turning angle at vertex i.
+ */
+real SpaceDynPolygon::energyBending() const
+{
+    const real Kb = prop()->bending / 4;
+    const size_t n = poly_.nbPoints();
+    std::vector<real> L(n), ang(n), tanHalf(n);
+
+    for ( size_t i = 0; i < n; ++i )
+    {
+        real dx = poly_.pts_[(i+1)%n].xx - poly_.pts_[i].xx;
+        real dy = poly_.pts_[(i+1)%n].yy - poly_.pts_[i].yy;
+        L[i] = std::sqrt(dx*dx + dy*dy);
+        ang[i] = std::atan2(dy, dx);
+    }
+    for ( size_t i = 0, j = n-1; i < n; ++i, ++j )
+    {
+        if ( j == n ) j = 0;
+        real a = std::fmod(ang[j] - ang[i], 2*M_PI);
+        a = std::fmod(a + M_PI, 2*M_PI) - M_PI;
+        tanHalf[i] = std::tan(a/2);
+    }
+    real E = 0;
+    for ( size_t i = 0, j = 1; i < n; ++i, ++j )
+    {
+        if ( j == n ) j = 0;
+        real k = ( tanHalf[i] + tanHalf[j] ) / L[i];
+        E += Kb * k * k * L[i];
+    }
+    return E;
+}
+
+
+/**
+ van 't Hoff form, E = Kv * ( V/V_bar - 1 - log(V/V_bar) ).
+ */
+real SpaceDynPolygon::energyOsmotic() const
+{
+    const real Kv = prop()->Kv;
+    const real V_bar = prop()->V_bar;
+    if ( Kv == 0 )
+        return 0;               // matches the short-circuit in the force kernel
+    real V = abs_real(poly_.surface());
+    if ( V <= 0 )
+        return 0;
+    return Kv * ( V/V_bar - 1 - std::log(V/V_bar) );
+}
+
+
+real SpaceDynPolygon::totalEnergy() const
+{
+    return energyTension() + energyBending()
+         + energyRegularization() + energyOsmotic();
+}
+
+
+/**
+ Finite-difference audit: for each term, compare -dE/dx against the force the
+ matching force calculation produces.
+ */
+void SpaceDynPolygon::selfTest(std::ostream& os) const
+{
+    const size_t n = poly_.nbPoints();
+    if ( n < 3 ) { os << "\npolygon too small for selfTest"; return; }
+
+    struct Term {
+        const char* name;
+        real (SpaceDynPolygon::*energy)() const;
+        std::vector<Vector2> (SpaceDynPolygon::*force)() const;
+    };
+    const Term terms[] = {
+        { "tension",        &SpaceDynPolygon::energyTension,        &SpaceDynPolygon::calculateTensionForces },
+        { "bending(opt)",   &SpaceDynPolygon::energyBending,        &SpaceDynPolygon::calculateBendingForces_optimized },
+        { "regularization", &SpaceDynPolygon::energyRegularization, &SpaceDynPolygon::calculateRegularizationForces },
+        { "osmotic",        &SpaceDynPolygon::energyOsmotic,        &SpaceDynPolygon::calculateOsmoticForces },
+    };
+
+    // step scaled to the geometry, small enough for a centred difference
+    real h = 1e-6 * meanEdge();
+    if ( h <= 0 ) h = 1e-9;
+
+    auto rewrap = [&]() {
+        poly_.pts_[n]   = poly_.pts_[0];
+        poly_.pts_[n+1] = poly_.pts_[1];
+    };
+
+    std::streamsize prec = os.precision(4);
+    os << std::scientific;
+    os << "\n% finite-difference check, h = " << h << ", " << n << " vertices";
+    os << "\n% term              max|F_analytic - F_fd|   max|F_analytic|   rel";
+
+    for ( Term const& t : terms )
+    {
+        std::vector<Vector2> F = (this->*t.force)();
+        real worst = 0, scale = 0;
+        for ( size_t i = 0; i < n; ++i )
+        {
+            for ( int c = 0; c < 2; ++c )
+            {
+                real& x = c ? poly_.pts_[i].yy : poly_.pts_[i].xx;
+                const real x0 = x;
+                x = x0 + h; rewrap();
+                const real Ep = (this->*t.energy)();
+                x = x0 - h; rewrap();
+                const real Em = (this->*t.energy)();
+                x = x0;     rewrap();
+
+                const real fd = -( Ep - Em ) / ( 2 * h );
+                const real fa = c ? F[i].YY : F[i].XX;
+                worst = std::max(worst, abs_real(fa - fd));
+                scale = std::max(scale, abs_real(fa));
+            }
+        }
+        os << "\n  " << t.name;
+        for ( size_t k = std::string(t.name).size(); k < 18; ++k ) os << ' ';
+        os << worst << "   " << scale << "   ";
+        os << ( scale > 0 ? worst/scale : worst );
+    }
+    os.unsetf(std::ios_base::floatfield);
+    os.precision(prec);
+}
