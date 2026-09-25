@@ -4,6 +4,7 @@ This repository contains the data and source code accompanying Matsubayashi, H. 
 
 This repository provides tools for:
 - simulating **actin-induced membrane deformation** using **Cytosim with a deformable membrane in 2-D**.
+- simulating the interplay between GUV-substrate adhesion and actin protrusion on membrane deformation.
 - analysis and plotting codes used to generate figures for modeling results in the manuscript.
 
 ## Repository Structure
