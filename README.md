@@ -1,6 +1,6 @@
 # actin-bracing-model
 
-This repository contains the data and source code accompanying Matsubayashi, H. T., Razavi, S., Rock, T. W., Nakajima, D., Nakamura, H., Kramer, D. A., ... & Inoue, T. (2024). Light-guided actin polymerization drives directed motility in protocells. bioRxiv. [10.1101/2024.10.14.617543](https://doi.org/10.1101/2024.10.14.617543) (Accepted in Nature Nanotechnology)
+This repository contains the data and source code accompanying Matsubayashi, H. T., Razavi, S., Tahara, Y. O., Akenuwa, O. H., Rock, T. W., Nakajima, D., Otsuka-Yamaguchi R., Nakamura, H., Kramer, D. A., Matsuura, T., Chen, B., Lee, C. T., Miyata, M., Murata, S., Nomura, S. M., Inoue, T. (2026). Light-guided actin polymerization drives directed motility in protocells. bioRxiv. [10.1101/2024.10.14.617543](https://doi.org/10.1101/2024.10.14.617543) (Accepted in Nature Nanotechnology)
 
 This repository provides tools for:
 - simulating **actin-induced membrane deformation** using **Cytosim with a deformable membrane in 2-D**.
